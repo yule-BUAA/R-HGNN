@@ -1,7 +1,7 @@
 # Heterogeneous Graph Representation Learning with Relation Awareness
 
 This experiment is based on stanford OGB (1.3.1) benchmark. 
-The description of "Heterogeneous Graph Representation Learning with Relation Awareness" is [avaiable here](https://arxiv.org/abs/xxxx.xxxxx). 
+The description of "Heterogeneous Graph Representation Learning with Relation Awareness" is [avaiable here](https://arxiv.org/abs/2105.11122). 
 
 To run the code, the steps are:
 
@@ -47,10 +47,10 @@ We run R-HGNN for 10 times with the random seed from 0 to 9 and report the avera
 Please consider citing our paper when using the code.
 
 ```bibtex
-@article{yu2021hetero,
+@article{yu2021heterogeneous,
   title={Heterogeneous Graph Representation Learning with Relation Awareness},
   author={Yu, Le and Sun, Leilei and Du, Bowen and Liu, Chuanren and Lv, Weifeng and Xiong, Hui},
-  journal={arXiv preprint arXiv:xxxx.xxxxx},
+  journal={arXiv preprint arXiv:2105.11122},
   year={2021}
 }
 ```
