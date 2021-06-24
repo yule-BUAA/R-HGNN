@@ -9,14 +9,6 @@ import shutil
 from tqdm import tqdm
 import dgl
 
-import sys
-
-cur_path = os.path.abspath(os.path.dirname(__file__))
-root_path = os.path.split(cur_path)[0]
-path_project = os.path.split(root_path)[0]
-sys.path.append(root_path)
-sys.path.append(path_project)
-
 from utils.utils import set_random_seed, convert_to_gpu, load_dataset
 from utils.EarlyStopping import EarlyStopping
 from utils.utils import get_n_params, get_edge_data_loader, get_predict_edge_index, get_optimizer_and_lr_scheduler, \
@@ -29,7 +21,7 @@ in link prediction, the training process takes one positive sample with negative
 the evaluation process (validation and test) takes in one positive sample with one negative sample
 """
 args = {
-    'dataset': 'OGB_MAG',  # OGB_MAG
+    'dataset': 'OGB_MAG',
     'model_name': 'R_HGNN_lr0.001_dropout0.3_seed_0_link_prediction',
     'predict_category': 'paper',
     'seed': 0,
