@@ -13,7 +13,7 @@ from model.RelationFusing import RelationFusing
 class R_HGNN_Layer(nn.Module):
     def __init__(self, graph: dgl.DGLHeteroGraph, input_dim: int, hidden_dim: int, relation_input_dim: int,
                  relation_hidden_dim: int, n_heads: int = 8, dropout: float = 0.2, negative_slope: float = 0.2,
-                 residual: bool = True):
+                 residual: bool = True, norm: bool = False):
         """
 
         :param graph: a heterogeneous graph
@@ -25,6 +25,7 @@ class R_HGNN_Layer(nn.Module):
         :param dropout: float, dropout rate
         :param negative_slope: float, negative slope
         :param residual: boolean, residual connections or not
+        :param norm: boolean, layer normalization or not
         """
         super(R_HGNN_Layer, self).__init__()
         self.input_dim = input_dim
@@ -35,6 +36,7 @@ class R_HGNN_Layer(nn.Module):
         self.dropout = dropout
         self.negative_slope = negative_slope
         self.residual = residual
+        self.norm = norm
 
         # node transformation parameters of each type
         self.node_transformation_weight = nn.ParameterDict({
@@ -68,6 +70,9 @@ class R_HGNN_Layer(nn.Module):
             for ntype in graph.ntypes:
                 self.res_fc[ntype] = nn.Linear(input_dim, n_heads * hidden_dim)
                 self.residual_weight[ntype] = nn.Parameter(torch.randn(1))
+
+        if self.norm:
+            self.layer_norm = nn.ModuleDict({ntype: nn.LayerNorm(n_heads * hidden_dim) for ntype in graph.ntypes})
 
         # relation type crossing attention trainable parameters
         self.relations_crossing_attention_weight = nn.ParameterDict({
@@ -141,6 +146,11 @@ class R_HGNN_Layer(nn.Module):
             output_features_dict[(srctype, etype, dsttype)] = self.relations_crossing_layer(dst_node_relations_features,
                                                                                             self.relations_crossing_attention_weight[etype])
 
+        # layer norm for the output
+        if self.norm:
+            for srctype, etype, dsttype in output_features_dict:
+                output_features_dict[(srctype, etype, dsttype)] = self.layer_norm[dsttype](output_features_dict[(srctype, etype, dsttype)])
+
         relation_embedding_dict = {}
         for etype in relation_embedding:
             relation_embedding_dict[etype] = self.relation_propagation_layer[etype](relation_embedding[etype])
@@ -153,7 +163,7 @@ class R_HGNN_Layer(nn.Module):
 class R_HGNN(nn.Module):
     def __init__(self, graph: dgl.DGLHeteroGraph, input_dim_dict: dict, hidden_dim: int, relation_input_dim: int,
                  relation_hidden_dim: int, num_layers: int, n_heads: int = 4,
-                 dropout: float = 0.2, negative_slope: float = 0.2, residual: bool = True):
+                 dropout: float = 0.2, negative_slope: float = 0.2, residual: bool = True, norm: bool = True):
         """
 
         :param graph: a heterogeneous graph
@@ -166,6 +176,7 @@ class R_HGNN(nn.Module):
         :param dropout: float, dropout rate
         :param negative_slope: float, negative slope
         :param residual: boolean, residual connections or not
+        :param norm: boolean, layer normalization or not
         """
         super(R_HGNN, self).__init__()
 
@@ -178,6 +189,7 @@ class R_HGNN(nn.Module):
         self.dropout = dropout
         self.negative_slope = negative_slope
         self.residual = residual
+        self.norm = norm
 
         # relation embedding dictionary
         self.relation_embedding = nn.ParameterDict({
@@ -195,10 +207,10 @@ class R_HGNN(nn.Module):
         # for each relation_layer
         self.layers.append(
             R_HGNN_Layer(graph, hidden_dim * n_heads, hidden_dim, relation_input_dim, relation_hidden_dim, n_heads,
-                         dropout, negative_slope, residual))
+                         dropout, negative_slope, residual, norm))
         for _ in range(1, self.num_layers):
             self.layers.append(R_HGNN_Layer(graph, hidden_dim * n_heads, hidden_dim, relation_hidden_dim * n_heads,
-                                            relation_hidden_dim, n_heads, dropout, negative_slope, residual))
+                                            relation_hidden_dim, n_heads, dropout, negative_slope, residual, norm))
 
         # transformation matrix for target node representation under each relation
         self.node_transformation_weight = nn.ParameterDict({

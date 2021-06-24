@@ -3,14 +3,21 @@
 This experiment is based on stanford OGB (1.3.1) benchmark. 
 The description of "Heterogeneous Graph Representation Learning with Relation Awareness" is [avaiable here](https://arxiv.org/abs/2105.11122). 
 
-To run the code, the steps are:
+### To run the node classification task, the steps are:
 
   1. run ```python preprocess_ogbn_mag.py``` to preprocess the original ogbn_mag dataset. 
   As the OGB-MAG dataset only has input features for paper nodes, for all the other types of nodes (author, affiliation, field), we use the metapath2vec model to generate their structural features. 
 
-  2. run ```python train_R_HGNN_ogbn_mag.py``` to train the model.
+  2. run ```python train_R_HGNN_ogbn_mag_node_classification.py``` to train the model.
 
-  3. run ```python eval_R_HGNN_ogbn_mag.py``` to evaluate the model.
+  3. run ```python eval_R_HGNN_ogbn_mag_node_classification.py``` to evaluate the model.
+  
+### To run the link prediction task, the steps are:
+
+  1. run ```python preprocess_ogbn_mag.py``` to preprocess the original ogbn_mag dataset. 
+  
+2. run ```python R_HGNN_ogbn_mag_link_prediction.py``` to train the model and get final performance.
+
 
 ## Environments:
 - [PyTorch 1.7.1](https://pytorch.org/)

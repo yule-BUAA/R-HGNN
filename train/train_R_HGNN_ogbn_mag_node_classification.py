@@ -28,7 +28,7 @@ args = {
     'dropout': 0.5,
     'n_layers': 2,
     'residual': True,
-    'batch_size': 1280,  # the number of graphs to train in each batch
+    'batch_size': 1280,  # the number of nodes to train in each batch
     'node_neighbors_min_num': 10,  # number of sampled edges for each type for each GNN layer
     'optimizer': 'adam',
     'weight_decay': 0.0,

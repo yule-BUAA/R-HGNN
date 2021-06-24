@@ -1,12 +1,12 @@
 import numpy as np
 import random
-import torch
 import torch.nn as nn
 import dgl
 from dgl.data.utils import load_graphs
 import torch
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, mean_squared_error, mean_absolute_error
 from ogb.nodeproppred import Evaluator
+from math import sqrt
 
 
 # convert the inputs from cpu to gpu, accelerate the running speed
@@ -107,6 +107,64 @@ def get_node_data_loader(node_neighbors_min_num: int, n_layers: int,
     return train_loader, val_loader, test_loader
 
 
+def get_predict_edge_index(graph: dgl.DGLGraph, sampled_edge_type: str or tuple,
+                           sample_edge_rate: float, seed: int = 0):
+    """
+    get predict edge index, return train_edge_idx, valid_edge_idx, test_edge_idx
+    :return:
+    """
+    torch.manual_seed(seed=seed)
+
+    selected_edges_num = int(graph.number_of_edges(sampled_edge_type) * sample_edge_rate)
+    permute_idx = torch.randperm(graph.number_of_edges(sampled_edge_type))
+
+    train_edge_idx = permute_idx[: 3 * selected_edges_num]
+    valid_edge_idx = permute_idx[3 * selected_edges_num: 4 * selected_edges_num]
+    test_edge_idx = permute_idx[4 * selected_edges_num: 5 * selected_edges_num]
+
+    return train_edge_idx, valid_edge_idx, test_edge_idx
+
+
+def get_edge_data_loader(node_neighbors_min_num: int, n_layers: int,
+                         graph: dgl.DGLGraph, batch_size: int, sampled_edge_type: str,
+                         negative_sample_edge_num: int,
+                         train_edge_idx: torch.Tensor, valid_edge_idx: torch.Tensor,
+                         test_edge_idx: torch.Tensor,
+                         reverse_etypes: dict, shuffle: bool = True, drop_last: bool = False,
+                         num_workers: int = 4):
+    """
+    get edge data loader for link prediction, including train_loader, val_loader and test_loader
+    :return:
+    """
+    # list of neighbors to sample per edge type for each GNN layer
+    sample_nodes_num = []
+    for layer in range(n_layers):
+        sample_nodes_num.append({etype: node_neighbors_min_num + layer for etype in graph.canonical_etypes})
+
+    # neighbor sampler
+    sampler = dgl.dataloading.MultiLayerNeighborSampler(sample_nodes_num)
+    train_neg_sampler = dgl.dataloading.negative_sampler.Uniform(negative_sample_edge_num)
+
+    train_loader = dgl.dataloading.EdgeDataLoader(
+        graph, {sampled_edge_type: train_edge_idx}, sampler, negative_sampler=train_neg_sampler, exclude='reverse_types',
+        reverse_etypes=reverse_etypes,
+        batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, num_workers=num_workers)
+
+    # sample the same number of edges when evaluating the model, set negative number to 1
+    eval_neg_sampler = dgl.dataloading.negative_sampler.Uniform(1)
+    val_loader = dgl.dataloading.EdgeDataLoader(
+        graph, {sampled_edge_type: valid_edge_idx}, sampler, negative_sampler=eval_neg_sampler, exclude='reverse_types',
+        reverse_etypes=reverse_etypes,
+        batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, num_workers=num_workers)
+
+    test_loader = dgl.dataloading.EdgeDataLoader(
+        graph, {sampled_edge_type: test_edge_idx}, sampler, negative_sampler=eval_neg_sampler, exclude='reverse_types',
+        reverse_etypes=reverse_etypes,
+        batch_size=batch_size, shuffle=shuffle, drop_last=drop_last, num_workers=num_workers)
+
+    return train_loader, val_loader, test_loader
+
+
 def get_optimizer_and_lr_scheduler(model: nn.Module, optimizer_name: str, learning_rate: float, weight_deacy: float, steps_per_epoch: int, epochs: int):
     """
     get optimizer and lr scheduler
@@ -150,3 +208,16 @@ def evaluate_node_classification(predicts: torch.Tensor, labels: torch.Tensor):
     macro_f1 = f1_score(y_true=labels, y_pred=predictions, average='macro')
 
     return accuracy, macro_f1
+
+
+def evaluate_link_prediction(predict_scores: torch.Tensor, true_scores: torch.Tensor):
+    """
+    get evaluation metrics for link prediction
+    :param predict_scores: Tensor, shape (N, )
+    :param true_scores: Tensor, shape (N, )
+    :return: RMSE and MAE to evaluate model performance in link prediction
+    """
+    RMSE = sqrt(mean_squared_error(true_scores.cpu().numpy(), predict_scores.cpu().numpy()))
+    MAE = mean_absolute_error(true_scores.cpu().numpy(), predict_scores.cpu().numpy())
+
+    return RMSE, MAE
