@@ -1,6 +1,6 @@
 # Heterogeneous Graph Representation Learning with Relation Awareness
 
-This experiment is based on stanford OGB (1.3.1) benchmark. 
+This experiment is based on Stanford OGB (1.3.1) benchmark. 
 The description of "Heterogeneous Graph Representation Learning with Relation Awareness" is [available here](https://arxiv.org/abs/2105.11122). 
 
 ### To run the node classification task, the steps are:
