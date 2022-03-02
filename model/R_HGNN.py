@@ -163,7 +163,7 @@ class R_HGNN_Layer(nn.Module):
 class R_HGNN(nn.Module):
     def __init__(self, graph: dgl.DGLHeteroGraph, input_dim_dict: dict, hidden_dim: int, relation_input_dim: int,
                  relation_hidden_dim: int, num_layers: int, n_heads: int = 4,
-                 dropout: float = 0.2, negative_slope: float = 0.2, residual: bool = True, norm: bool = True):
+                 dropout: float = 0.2, negative_slope: float = 0.2, residual: bool = True, norm: bool = False):
         """
 
         :param graph: a heterogeneous graph
